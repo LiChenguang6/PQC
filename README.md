@@ -33,6 +33,59 @@
 
 ### 安装与运行
 
+#### Windows + VS Code
+
+1. 安装 Python 3.12 和 VS Code，并在 VS Code 中安装 Microsoft 发布的 **Python** 扩展。
+2. 在 VS Code 中打开本仓库文件夹，选择 **终端 → 新建终端**，使用 **PowerShell**。
+3. 确认终端位于仓库根目录（可以看到 `README.md` 和 `Kyber` 文件夹），执行：
+
+```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install "numpy==2.4.2"
+```
+
+如果提示找不到 `py`，可以在确认 `python --version` 显示 Python 3.12 后，用 `python -m venv .venv` 创建虚拟环境。
+
+按 `Ctrl+Shift+P`，选择 **Python: Select Interpreter**（选择解释器），再选择仓库中的 `.venv\Scripts\python.exe`。下面的命令直接调用该解释器，无需激活虚拟环境。
+
+在临时目录中运行实验，避免覆盖仓库中的示例数据：
+
+```powershell
+$projectDir = (Get-Location).Path
+$pythonExe = Join-Path $projectDir '.venv\Scripts\python.exe'
+$outputDir = Join-Path ([System.IO.Path]::GetTempPath()) ([System.Guid]::NewGuid().ToString())
+New-Item -ItemType Directory -Path $outputDir | Out-Null
+Push-Location $outputDir
+try {
+    & $pythonExe -B (Join-Path $projectDir 'Kyber\main.py')
+    if ($LASTEXITCODE -ne 0) { throw '实验运行失败，请检查上方错误信息。' }
+} finally {
+    Pop-Location
+}
+Write-Output "实验输出目录：$outputDir"
+```
+
+在同一 PowerShell 终端中核对解密结果：
+
+```powershell
+@'
+from pathlib import Path
+import sys
+import numpy as np
+
+output = Path(sys.argv[1])
+message = np.loadtxt(output / "m.txt", dtype=int)
+decoded = np.loadtxt(output / "m_decode.txt", dtype=int)
+assert message.shape == decoded.shape == (256,)
+np.testing.assert_array_equal(message, decoded)
+print("PASS: all 256 message bits recovered.")
+'@ | & $pythonExe - $outputDir
+```
+
+显示 `PASS: all 256 message bits recovered.` 表示本次消息完整恢复。输出文件保留在显示的临时目录中，查看完后可以手动删除。
+
+#### Linux / macOS
+
 以下命令适用于 Linux / macOS 的 Bash 终端，请从仓库根目录执行。
 
 创建虚拟环境并安装依赖：

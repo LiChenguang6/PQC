@@ -88,7 +88,6 @@ def multiplier(A_x, B_x, N, Mod):
                 Sum[i] += A_x[j] * B_x[i-j]
             else:
                 Sum[i] -= A_x[j] * B_x[N+i-j]
-
     return Sum % Mod
 def generate_key_t(A, s1, s2, k, l, N, Mod):
     t = np.zeros((k, N), dtype=np.int64)
@@ -100,3 +99,7 @@ def generate_key_t(A, s1, s2, k, l, N, Mod):
             t[i] += multiplier(A[i][j], s1[j], N, Mod)
 
     return t % Mod
+def power2round(t, d=13):
+    t1 = (t + (1 << (d - 1)) - 1) >> d
+    t0 = t - (t1 << d)
+    return t1, t0

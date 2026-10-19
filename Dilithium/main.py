@@ -3,7 +3,13 @@ from generate_key import (
     derive_seeds,
     generate_key_A_NTT,
     generate_key_s,
-    generate_key_t
+    generate_key_t,
+    power2round
+)
+from key_encode import (
+    pk_encode,
+    generate_tr,
+    sk_encode
 )
 from ntt_utils import inverse_ntt_A
 k = 4
@@ -25,3 +31,11 @@ s1, s2 = generate_key_s(rho_prime, k, l, eta)
 
 # Step 4：计算 t
 t = generate_key_t(A, s1, s2, k, l, N, q)
+
+# Step 5：Power2Round
+t1, t0 = power2round(t, d=13)
+
+# Step 6：公钥、私钥编码
+pk = pk_encode(rho, t1)
+tr = generate_tr(pk)
+sk = sk_encode(rho, K, tr, s1, s2, t0)

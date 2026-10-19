@@ -1,57 +1,31 @@
-# export8 验证记录
+# export9 白屏修复验证
 
-最终 APK SHA-256：`522df59009e97c96667860fe76bc1c28f3e6c8e765c7c200eece5eccaa0eed24`。Android API 29 x86_64 云端模拟器；ARM64 指令仿真。真实平台内容不可达，测试媒体为受控 MP4，不代表真实平台完整播放。
+APK SHA-256：`df3a608df7e939c39df58945ce194e39ca17cd8f84e3a7401deafb84ae5be1b2`
 
-## installed-results.json
+原 ForbiddenPage::build 的 Obx 闭包调用 UserService.isForbiddenVip；其原 getter 通过 Rx.value 建立订阅。export8 的测试入口提前返回，未执行任何 Rx 读取；RxNotifier.notifyChildrens 检查 canUpdate，无依赖时抛出 [Get] the improper use of a GetX 异常。此缺陷可解释保留原生浮层、其他栏目正常的白色错误页，但没有读取用户设备运行日志，不能排除其他原因。
 
-```json
-{
-  "installed_sha256": "522df59009e97c96667860fe76bc1c28f3e6c8e765c7c200eece5eccaa0eed24",
-  "matches_delivery": true
-}
-```
+ARM64/x86_64 共 40 个完整 getter 指令执行用例，涵盖开关开／关及会员类型 0、1、7、8、9。export8 开启时零次 Rx 读取；export9 原始读取次数全部保留，结果和栈均通过。Rx.value 由测试桩记录调用并返回受控模型，并非实际 Dart VM 中运行整个 Obx。
 
-## ui-results.json
+原 getter 在返回尾部之前与原 APK 逐字一致，无新增分配或调用。所有 Java 源码、dex 和 assets 与 export8 一致。下载功能沿用 export8 的实测记录，本版未重复全部下载用例。
 
-```json
-{
-  "ui8": {
-    "passed": true,
-    "metrics": {
-      "cold_activity_ms": "3887",
-      "warm_activity_ms": "1884",
-      "warm_rows": "1"
-    }
-  },
-  "entry8": {
-    "passed": true,
-    "metrics": {}
-  },
-  "apk_sha256": "522df59009e97c96667860fe76bc1c28f3e6c8e765c7c200eece5eccaa0eed24",
-  "drag": {
-    "passed": true,
-    "host": "native DownloadTasksActivity with controlled scrolling content",
-    "position_persisted": true,
-    "underlying_scroll_preserved": true,
-    "manage_tap_after_drag": true
-  }
-}
-```
-
-## service-results.json
+## comparison-results.json
 
 ```json
 {
   "passed": true,
-  "paused_progress_stable": true,
-  "paused_state_persists_across_process_restart": true,
-  "paused_task_frees_parallel_slot": true,
-  "resume_waits_for_parallel_slot": true,
-  "cancel_other_task_resumes_waiting_task": true,
-  "delete_while_paused_completes": true,
-  "rapid_idle_cancel_commands": 25,
-  "process_survived_more_than_foreground_deadline": true,
-  "apk_sha256": "522df59009e97c96667860fe76bc1c28f3e6c8e765c7c200eece5eccaa0eed24"
+  "baseline_commit": "6adae13d4f03223f2b21a097e366a3cc0c2ddfb6",
+  "all_dex_and_assets_byte_identical": true,
+  "all_java_sources_byte_identical": true,
+  "original_native_libraries_preserved_except_two_declared_snapshots": true,
+  "changed_entries": [
+    "AndroidManifest.xml",
+    "lib/arm64-v8a/libapp.so",
+    "lib/x86_64/libapp.so",
+    "META-INF/X2-EXPOR.SF",
+    "META-INF/X2-EXPOR.RSA",
+    "META-INF/MANIFEST.MF"
+  ],
+  "apk_sha256": "df3a608df7e939c39df58945ce194e39ca17cd8f84e3a7401deafb84ae5be1b2"
 }
 ```
 
@@ -75,11 +49,6 @@
   },
   {
     "abi": "arm64-v8a",
-    "development_switch_off_preserves_original_getter": true,
-    "switch_on_returns_local_test_gate": true
-  },
-  {
-    "abi": "arm64-v8a",
     "preview_timer_off_calls_original": true,
     "preview_timer_on_returns_without_marking_end": true
   },
@@ -99,11 +68,6 @@
   },
   {
     "abi": "x86_64",
-    "development_switch_off_preserves_original_getter": true,
-    "switch_on_returns_local_test_gate": true
-  },
-  {
-    "abi": "x86_64",
     "preview_timer_off_calls_original": true,
     "preview_timer_on_returns_without_marking_end": true
   }
@@ -117,17 +81,26 @@
   "preserved_original_native_libraries": 19,
   "changed_original_native_libraries": {
     "lib/arm64-v8a/libapp.so": {
-      "changed_bytes": 961,
+      "changed_bytes": 957,
       "only_declared_UI_scroll_launch_title_tasks_and_development_patches": true,
       "file_length_unchanged": true
     },
     "lib/x86_64/libapp.so": {
-      "changed_bytes": 851,
+      "changed_bytes": 831,
       "only_declared_UI_scroll_launch_title_tasks_and_development_patches": true,
       "file_length_unchanged": true
     }
   },
-  "output_sha256": "522df59009e97c96667860fe76bc1c28f3e6c8e765c7c200eece5eccaa0eed24"
+  "output_sha256": "df3a608df7e939c39df58945ce194e39ca17cd8f84e3a7401deafb84ae5be1b2"
+}
+```
+
+## installed-results.json
+
+```json
+{
+  "installed_sha256": "df3a608df7e939c39df58945ce194e39ca17cd8f84e3a7401deafb84ae5be1b2",
+  "matches_delivery": true
 }
 ```
 
@@ -135,7 +108,7 @@
 
 ```json
 {
-  "final_apk_sha256": "522df59009e97c96667860fe76bc1c28f3e6c8e765c7c200eece5eccaa0eed24",
+  "final_apk_sha256": "df3a608df7e939c39df58945ce194e39ca17cd8f84e3a7401deafb84ae5be1b2",
   "original_Flutter_activity_started": true,
   "patched_libapp_and_original_libflutter_mapped": true,
   "process_survived_startup": true,
@@ -144,22 +117,14 @@
 }
 ```
 
-## filename-download-results.json
+## entry-results.json
 
 ```json
 {
   "passed": true,
-  "two_same_title_jobs_saved_separately": true,
-  "both_MP4_decode": true,
-  "continued_after_HOME": true,
-  "output_names": [
-    "中文命名测试😀_第一集 (6).mp4",
-    "中文命名测试😀_第一集 (7).mp4"
-  ],
-  "output_sha256": "522df59009e97c96667860fe76bc1c28f3e6c8e765c7c200eece5eccaa0eed24"
+  "production_manager_and_settings_open": true,
+  "apk_sha256": "df3a608df7e939c39df58945ce194e39ca17cd8f84e3a7401deafb84ae5be1b2"
 }
 ```
 
-已完成项测试验证了带读权限的 ACTION_VIEW / ClipData 请求；没有把外部播放器实际播放算作已完成的验证。拖动在独立原生宿主上测得，原 MainActivity 的双按钮管理／设置入口另有通过记录。一次重复 Flutter 仪器启动停留在启动画面，终止该次用例后改用原生宿主验证拖动；正常启动另测，真实平台首页仍不可达。
-
-历史版本报告保存在源码包，不能作为本构建的实测结果。
+真实平台接口不可达；本报告不声称已经验证禁区列表恢复或完整视频播放。

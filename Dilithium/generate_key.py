@@ -9,10 +9,10 @@ def derive_seeds(random_seed32, k, l):
     shake256.update(random_seed32+bytes([k])+bytes([l]))
     buf=shake256.digest(128)
     rou=buf[0:32]
-    rou1=buf[32:96]
+    rou_prime=buf[32:96]
     K=buf[96:128]
-    return rou,rou1,K
-def rej_ntt_poly(seed34):#生成256个合法系数0~8380417
+    return rou,rou_prime,K
+def rej_ntt_poly(seed34):#生成256个合法系数0~q
     poly = np.zeros(256, dtype=np.int64)
     shake128 = hashlib.shake_128()
     shake128.update(seed34)
@@ -29,11 +29,54 @@ def rej_ntt_poly(seed34):#生成256个合法系数0~8380417
         cnt+=1
         x=q
     return poly
-def generate_key_A(rho, k, l):#生成k*l*256个
-    A_hat = np.zeros((k, l, 256), dtype=np.int64)
+def generate_key_A_NTT(rho, k, l):#生成k*l*256个0~q的矩阵A
+    A_NTT = np.zeros((k, l, 256), dtype=np.int64)
     for i in range(k):
         for j in range(l):
             seed=rho+bytes([j])+bytes([i])
-            A_hat[i][j]=rej_ntt_poly(seed)
-    return A_hat
-    
+            A_NTT[i][j]=rej_ntt_poly(seed)
+    return A_NTT
+def rej_bounded_poly(seed66, eta):#生成256个范围-2~2的向量
+    poly = np.zeros(256, dtype=np.int64)
+    num=0
+    if eta ==2 :
+        num=2
+    else:
+        raise ValueError("目前仅支持 eta=2")
+    shake256 = hashlib.shake_256()
+    shake256.update(seed66)
+    pos=0
+    cnt=0
+    output=shake256.digest(1+pos)
+    buf=output[pos]
+    z0=buf&0x0f
+    z1=buf>>4
+    z=z0
+    z_cnt=0
+    while cnt<256:
+        if z<15 :
+            poly[cnt]=num-z%5
+            cnt+=1
+        if z_cnt==1:
+            pos+=1
+            output=shake256.digest(1+pos)
+            buf=output[pos]
+            z0=buf&0x0f
+            z1=buf>>4
+            z=z0
+            z_cnt=0
+        else:
+            z=z1
+            z_cnt=1
+    return poly
+def generate_key_s(rho_prime, k, l, eta):
+    s1 = np.zeros((l, 256), dtype=np.int64)
+    s2= np.zeros((k, 256), dtype=np.int64)
+    for i in range(l):
+        seed66=rho_prime + (i).to_bytes(2, "little")#两字节小端序合并
+        s1[i]=rej_bounded_poly(seed66,eta)
+    for j in range(k):
+        seed66=rho_prime + (l+j).to_bytes(2, "little")#两字节小端序合并
+        s2[j]=rej_bounded_poly(seed66,eta)
+    return s1, s2
+

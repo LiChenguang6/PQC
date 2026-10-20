@@ -79,4 +79,27 @@ def generate_key_s(rho_prime, k, l, eta):
         seed66=rho_prime + (l+j).to_bytes(2, "little")#两字节小端序合并
         s2[j]=rej_bounded_poly(seed66,eta)
     return s1, s2
+def multiplier(A_x, B_x, N, Mod):
+    Sum = np.zeros(N, dtype=np.int64)
 
+    for i in range(N):
+        for j in range(N):
+            if i >= j:
+                Sum[i] += A_x[j] * B_x[i-j]
+            else:
+                Sum[i] -= A_x[j] * B_x[N+i-j]
+    return Sum % Mod
+def generate_key_t(A, s1, s2, k, l, N, Mod):
+    t = np.zeros((k, N), dtype=np.int64)
+
+    for i in range(k):
+        t[i] += s2[i]
+
+        for j in range(l):
+            t[i] += multiplier(A[i][j], s1[j], N, Mod)
+
+    return t % Mod
+def power2round(t, d=13):
+    t1 = (t + (1 << (d - 1)) - 1) >> d
+    t0 = t - (t1 << d)
+    return t1, t0

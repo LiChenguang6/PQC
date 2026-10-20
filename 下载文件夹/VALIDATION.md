@@ -1,74 +1,49 @@
-# export10 候选修复验证
+# export12 验证记录
 
-APK SHA-256：`50260d992df1821b1ac0a7c4692ecace261b4608de062aa9f6e4e5f6da8cd514`
+APK SHA-256：`832049c7edc33c77d232bcafbd3bf5254a8df632981188fb66ef954872883a61`
 
-**真实禁区视频播放 >20 秒：未通过验证（无法取得真实流，非已证明仍停止）。**
+测试环境为Android API29 x86_64云端模拟器及ARM64/x86_64指令仿真；不是用户的红米Turbo4Pro/Android16。**真实禁区视频连续播放超过20秒仍未验证通过。**
 
-PlayerController 的位置回调在 >20 秒且 canWatch=false 时，独立调用 pause 后 seek。加入测试开关分支避免该本地停止路径；保持位置写入、进度回调、通知及开关关闭时的原行为。
-
-40 个完整回调指令测试覆盖 ARM64/x86_64 × 开关开/关 × canWatch 开/关 × 19/20/21/25/65 秒。媒体调用由桩记录，不是实际播放，没有用测试视频替代平台视频。
-
-## network-results.json
+## ui-results.json
 
 ```json
-[
-  {
-    "host": "d1r1vv8zvbqvut.cloudfront.net",
-    "status": 403,
-    "headers": {
-      "content-type": "text/plain; charset=UTF-8",
-      "server": "envoy",
-      "x-cache": "Error from cloudfront"
-    },
-    "error_body": "error code: 1010\n"
+{
+  "delete12": {
+    "passed": true,
+    "properties": {}
   },
-  {
-    "host": "drlcjvmgp6ra1.cloudfront.net",
-    "status": 403,
-    "headers": {
-      "content-type": "text/plain; charset=UTF-8",
-      "server": "envoy",
-      "x-cache": "Error from cloudfront"
-    },
-    "error_body": "error code: 1010\n"
+  "apk_sha256": "832049c7edc33c77d232bcafbd3bf5254a8df632981188fb66ef954872883a61",
+  "real_forbidden_video_over_20_seconds_verified": false,
+  "appearance12": {
+    "passed": true,
+    "properties": {
+      "launcher_pin_supported": "true",
+      "launcher_pinned_and_updated": "true"
+    }
   },
-  {
-    "host": "rea.5mv4d9bn.work",
-    "error": "<urlopen error Tunnel connection failed: 403 Forbidden>"
-  },
-  {
-    "host": "rea.5n4v4dkk.work",
-    "error": "<urlopen error Tunnel connection failed: 403 Forbidden>"
-  },
-  {
-    "host": "rea.66zif0m5.work",
-    "error": "<urlopen error Tunnel connection failed: 403 Forbidden>"
-  },
-  {
-    "host": "rea.68zvqszy.work",
-    "error": "<urlopen error Tunnel connection failed: 403 Forbidden>"
+  "diagnostic11": {
+    "passed": true,
+    "properties": {
+      "numeric_state": "players=1 p0[pos=0.00 dur=2.02 pause=1 eof=0 idle=0]"
+    }
   }
-]
+}
 ```
 
-## comparison-results.json
+## service-results.json
 
 ```json
 {
   "passed": true,
-  "baseline_commit": "1c48f22b5ac8fb96a608edca33ffeae9fff92197",
-  "all_dex_and_assets_byte_identical": true,
-  "all_java_sources_byte_identical": true,
-  "original_native_libraries_preserved_except_two_declared_snapshots": true,
-  "changed_entries": [
-    "AndroidManifest.xml",
-    "lib/arm64-v8a/libapp.so",
-    "lib/x86_64/libapp.so",
-    "META-INF/X2-EXPOR.SF",
-    "META-INF/X2-EXPOR.RSA",
-    "META-INF/MANIFEST.MF"
-  ],
-  "apk_sha256": "50260d992df1821b1ac0a7c4692ecace261b4608de062aa9f6e4e5f6da8cd514"
+  "paused_progress_stable": true,
+  "paused_state_persists_across_process_restart": true,
+  "paused_task_frees_parallel_slot": true,
+  "resume_waits_for_parallel_slot": true,
+  "cancel_other_task_resumes_waiting_task": true,
+  "delete_while_paused_completes": true,
+  "rapid_idle_cancel_commands": 25,
+  "process_survived_more_than_foreground_deadline": true,
+  "apk_sha256": "832049c7edc33c77d232bcafbd3bf5254a8df632981188fb66ef954872883a61"
 }
 ```
 
@@ -76,7 +51,7 @@ PlayerController 的位置回调在 >20 秒且 canWatch=false 时，独立调用
 
 ```json
 {
-  "installed_sha256": "50260d992df1821b1ac0a7c4692ecace261b4608de062aa9f6e4e5f6da8cd514",
+  "installed_sha256": "832049c7edc33c77d232bcafbd3bf5254a8df632981188fb66ef954872883a61",
   "matches_delivery": true
 }
 ```
@@ -85,7 +60,7 @@ PlayerController 的位置回调在 >20 秒且 canWatch=false 时，独立调用
 
 ```json
 {
-  "final_apk_sha256": "50260d992df1821b1ac0a7c4692ecace261b4608de062aa9f6e4e5f6da8cd514",
+  "final_apk_sha256": "832049c7edc33c77d232bcafbd3bf5254a8df632981188fb66ef954872883a61",
   "original_Flutter_activity_started": true,
   "patched_libapp_and_original_libflutter_mapped": true,
   "process_survived_startup": true,
@@ -101,18 +76,22 @@ PlayerController 的位置回调在 >20 秒且 canWatch=false 时，独立调用
   "preserved_original_native_libraries": 19,
   "changed_original_native_libraries": {
     "lib/arm64-v8a/libapp.so": {
-      "changed_bytes": 985,
+      "changed_bytes": 1008,
       "only_declared_UI_scroll_launch_title_tasks_and_development_patches": true,
       "file_length_unchanged": true
     },
     "lib/x86_64/libapp.so": {
-      "changed_bytes": 854,
+      "changed_bytes": 864,
       "only_declared_UI_scroll_launch_title_tasks_and_development_patches": true,
       "file_length_unchanged": true
     }
   },
-  "output_sha256": "50260d992df1821b1ac0a7c4692ecace261b4608de062aa9f6e4e5f6da8cd514"
+  "output_sha256": "832049c7edc33c77d232bcafbd3bf5254a8df632981188fb66ef954872883a61"
 }
 ```
 
-完整 pause-results.json、getter-results.json、machine-results.json 在源码包 validation/export10-tests 中。下载功能字节码与 export9 完全一致，本次没有重复全部历史下载测试。
+文件操作用例使用真实SAF文档，检查记录删除保留文件、批量物理删除、失败保留记录、单项／批量菜单及确认。外观用例实际固定并更新桌面入口，检查导入、非法图片保护、可关闭封面、设置入口及恢复默认保留无关文件。封面UI在受控原生宿主中检查，真实平台冷启动仍受原网络初始化影响。
+
+播放诊断用受控短MP4检查原MPV数值读取、失焦时同步、隐私字段不泄漏及复制；不是禁区播放证明。pause-results.json覆盖40个完整位置回调与计数，getter-results.json保留Rx读取回归。后台控制测试验证暂停、并发名额、取消／删除、重启保留暂停状态。
+
+首次界面用例被模拟器SystemUI无响应弹窗遮挡，处理后同一APK重跑通过。未发布的诊断实现曾出现引用释放循环错误，已修正，最终APK诊断用例通过。历史报告不作为本构建实测结论。

@@ -1,53 +1,90 @@
-# export13 验证记录
+# export14 验证记录
 
-APK SHA-256：`9e15cd584112ca9f571043e0f010cee032293f942d38e77a9cc44fcc50086f82`
+**真实指定视频超过20秒尚未验证，不能把受控素材当作成功。**
 
-测试环境为Android API29 x86_64云端模拟器及ARM64/x86_64指令仿真；不是用户的红米Turbo4Pro/Android16。**真实禁区视频连续播放超过20秒仍未验证通过。**
+APK SHA-256：`5b75155bf9f4316c5ed55806c96112bf7fcdf1602f3b7e2232887e2d6412c266`
+
+## inspection-results.json
+
+```json
+{
+  "passed": true,
+  "cases": [
+    {
+      "case": "short",
+      "passed": true,
+      "report": "http=200\nkind=hls\nmanifest_depth=0\nvariant_policy=original_media_playlist\nsegments=2\nmanifest_seconds=12.070\nendlist=1\nencrypted=0\nnonstandard_encryption=0\n"
+    },
+    {
+      "case": "long",
+      "passed": true,
+      "report": "http=200\nkind=hls\nmanifest_depth=0\nvariant_policy=original_media_playlist\nsegments=15\nmanifest_seconds=90.000\nendlist=1\nencrypted=0\nnonstandard_encryption=0\n"
+    },
+    {
+      "case": "live",
+      "passed": true,
+      "report": "http=200\nkind=hls\nmanifest_depth=0\nvariant_policy=original_media_playlist\nsegments=3\nmanifest_seconds=18.000\nendlist=0\nencrypted=0\nnonstandard_encryption=0\n"
+    },
+    {
+      "case": "encrypted",
+      "passed": true,
+      "report": "http=200\nkind=hls\nmanifest_depth=0\nvariant_policy=original_media_playlist\nsegments=2\nmanifest_seconds=12.000\nendlist=1\nencrypted=1\nnonstandard_encryption=0\n"
+    },
+    {
+      "case": "master",
+      "passed": true,
+      "report": "http=200\nkind=hls\nmanifest_depth=1\nvariant_policy=highest_bandwidth\nsegments=15\nmanifest_seconds=90.000\nendlist=1\nencrypted=0\nnonstandard_encryption=0\n"
+    },
+    {
+      "case": "redirect",
+      "passed": true,
+      "report": "http=200\nkind=hls\nmanifest_depth=0\nvariant_policy=original_media_playlist\nsegments=15\nmanifest_seconds=90.000\nendlist=1\nencrypted=0\nnonstandard_encryption=0\n"
+    },
+    {
+      "case": "direct",
+      "passed": true,
+      "report": "http=200\nkind=direct_or_unknown\nmanifest_depth=0\n"
+    },
+    {
+      "case": "json",
+      "passed": true,
+      "report": "http=200\nkind=json\nmanifest_depth=0\n"
+    },
+    {
+      "case": "invalid",
+      "passed": true,
+      "report": "error=ReportedException"
+    },
+    {
+      "case": "huge",
+      "passed": true,
+      "report": "error=ReportedException"
+    },
+    {
+      "case": "denied",
+      "passed": true,
+      "report": "error=ReportedException"
+    }
+  ],
+  "segment_and_key_requests": 0,
+  "cross_origin_auth_stripped": true,
+  "report_excludes_fixture_credentials": true,
+  "temporary_directories_cleaned": true
+}
+```
 
 ## ui-results.json
 
 ```json
 {
+  "source14": {
+    "passed": true
+  },
   "delete12": {
-    "passed": true,
-    "properties": {}
+    "passed": true
   },
-  "apk_sha256": "9e15cd584112ca9f571043e0f010cee032293f942d38e77a9cc44fcc50086f82",
-  "real_forbidden_video_over_20_seconds_verified": false,
-  "appearance12": {
-    "passed": true,
-    "properties": {
-      "launcher_pin_supported": "true",
-      "launcher_pinned_and_updated": "true"
-    }
-  },
-  "cover13": {
-    "passed": true,
-    "properties": {}
-  },
-  "diagnostic11": {
-    "passed": true,
-    "properties": {
-      "numeric_state": "players=1 p0[pos=0.00 dur=2.02 pause=1 eof=0 idle=0]"
-    }
-  }
-}
-```
-
-## service-results.json
-
-```json
-{
-  "passed": true,
-  "paused_progress_stable": true,
-  "paused_state_persists_across_process_restart": true,
-  "paused_task_frees_parallel_slot": true,
-  "resume_waits_for_parallel_slot": true,
-  "cancel_other_task_resumes_waiting_task": true,
-  "delete_while_paused_completes": true,
-  "rapid_idle_cancel_commands": 25,
-  "process_survived_more_than_foreground_deadline": true,
-  "apk_sha256": "9e15cd584112ca9f571043e0f010cee032293f942d38e77a9cc44fcc50086f82"
+  "apk_sha256": "5b75155bf9f4316c5ed55806c96112bf7fcdf1602f3b7e2232887e2d6412c266",
+  "real_target_video_over_20_seconds_verified": false
 }
 ```
 
@@ -55,7 +92,7 @@ APK SHA-256：`9e15cd584112ca9f571043e0f010cee032293f942d38e77a9cc44fcc50086f82`
 
 ```json
 {
-  "installed_sha256": "9e15cd584112ca9f571043e0f010cee032293f942d38e77a9cc44fcc50086f82",
+  "installed_sha256": "5b75155bf9f4316c5ed55806c96112bf7fcdf1602f3b7e2232887e2d6412c266",
   "matches_delivery": true
 }
 ```
@@ -64,7 +101,7 @@ APK SHA-256：`9e15cd584112ca9f571043e0f010cee032293f942d38e77a9cc44fcc50086f82`
 
 ```json
 {
-  "final_apk_sha256": "9e15cd584112ca9f571043e0f010cee032293f942d38e77a9cc44fcc50086f82",
+  "final_apk_sha256": "5b75155bf9f4316c5ed55806c96112bf7fcdf1602f3b7e2232887e2d6412c266",
   "original_Flutter_activity_started": true,
   "patched_libapp_and_original_libflutter_mapped": true,
   "process_survived_startup": true,
@@ -90,12 +127,42 @@ APK SHA-256：`9e15cd584112ca9f571043e0f010cee032293f942d38e77a9cc44fcc50086f82`
       "file_length_unchanged": true
     }
   },
-  "output_sha256": "9e15cd584112ca9f571043e0f010cee032293f942d38e77a9cc44fcc50086f82"
+  "output_sha256": "5b75155bf9f4316c5ed55806c96112bf7fcdf1602f3b7e2232887e2d6412c266"
 }
 ```
 
-文件操作用例使用真实SAF文档，检查记录删除保留文件、批量物理删除、失败保留记录、单项／批量菜单及确认。外观用例实际固定并更新桌面入口，检查导入、非法图片保护、可关闭封面、设置入口及恢复默认保留无关文件。封面关闭在受控原生宿主中检查；另在原Flutter启动Activity中用测试专用主页就绪标记验证封面保持及移除。该标记由测试注入，不代表真实平台首页已加载。真实平台冷启动仍受原网络初始化影响。
+## comparison-results.json
 
-播放诊断用受控短MP4检查原MPV数值读取、失焦时同步、隐私字段不泄漏及复制；不是禁区播放证明。pause-results.json覆盖40个完整位置回调与计数，getter-results.json保留Rx读取回归。后台控制测试验证暂停、并发名额、取消／删除、重启保留暂停状态。
+```json
+{
+  "compared_to_release": "export13",
+  "existing_media_download_implementation_unchanged": true,
+  "all_native_libraries_identical_to_export13": true,
+  "native_library_count": 27,
+  "unchanged_source_files": [
+    "src/org/x2/export/VideoFilename.java",
+    "src/org/x2/export/CacheExportActivity.java",
+    "src/org/x2/export/PlaylistPreparer.java",
+    "src/org/x2/export/DownloadConfig.java",
+    "src/org/x2/export/AppearanceActivity.java",
+    "src/org/x2/export/NativeRemux.java",
+    "src/org/x2/export/PlayerCapture.java",
+    "src/org/x2/export/Appearance.java",
+    "src/org/x2/export/DownloadService.java",
+    "src/org/x2/export/PlayingExportActivity.java",
+    "src/org/x2/export/DownloadTasksActivity.java",
+    "src/org/x2/export/ExportEntry.java",
+    "src/org/x2/export/DownloadStore.java",
+    "src/org/x2/export/DownloadQueueCache.java",
+    "native/player_capture.c",
+    "native/page_title.h",
+    "native/export_bridge.c"
+  ],
+  "apk_sha256": "5b75155bf9f4316c5ed55806c96112bf7fcdf1602f3b7e2232887e2d6412c266"
+}
+```
 
-历史export12首次界面用例曾被模拟器SystemUI无响应弹窗遮挡，处理后重跑通过。未发布的诊断实现曾出现引用释放循环错误，已修正，最终APK诊断用例通过。本轮连续启动Flutter时，模拟器曾阻塞在原Flutter的nativeSurfaceCreated；结束该进程后单独重跑诊断。历史报告不作为本构建实测结论。
+
+主机用11种清单/传输场景验证时长、ENDLIST、主清单选择、错误响应、长度限制、跨域凭据隔离及复制报告脱敏，未请求分片/密钥。Android API29 x86_64上用受控12秒HLS、原MPV和背景采样，先播放再暂停，验证设置入口、最近源回退、清单统计与复制；同时回归实际SAF文件删除。
+
+首次手机端检查暴露了暂停后原snapshot不再返回地址的问题，已加入开启开发测试时的30秒内存快照，并重新构建验证。历史export13的完整后台/外观/两架构指令用例是基线，未冒充本构建重跑。comparison-results记录现有下载器实现和所有原生库与export13逐字节相同；新增代码为Java检查与诊断采样。

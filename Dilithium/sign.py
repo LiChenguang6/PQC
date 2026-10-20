@@ -1,7 +1,7 @@
 import numpy as np
 import hashlib
 import os
-
+from key_encode import bit_pack
 from generate_key import multiplier
 from parameters import *#变量引入
 def prepare_sign(message, tr, K, ctx=b""):
@@ -37,3 +37,45 @@ def generate_sign_w(A, y, k, l, N, q):#输出w=Ay
             w[i] += multiplier(A[i][j], y[j], N, q)
 
     return w % q
+def decompose(w, gamma2):# w % q = (2*gamma2*w1+w0) % q
+    m = (q - 1) // alpha
+    alpha = 2 * gamma2
+    r = w % q
+    alpha1=(gamma2+r-1)//alpha
+    alpha0=r-2*gamma2*alpha1
+    alpha0 = np.where(alpha1 == m, alpha0 - 1, alpha0)
+    alpha1 = np.where(alpha1 == m, 0, alpha1)
+    w1=alpha1
+    w0=alpha0
+    return w1, w0
+def w1_encode(w1, gamma2):
+    if gamma2 == 95232:
+        bits = 6
+    elif gamma2 == 261888:
+        bits = 4
+    else:
+        raise ValueError("不支持的 gamma2")
+    w1_bytes = bit_pack(w1, bits)
+    return w1_bytes
+def generate_challenge_seed(mu, w1_bytes):
+    c_tilde=hashlib.shake_256(mu+w1_bytes).digest(32)
+    return c_tilde
+def sample_in_ball(c_tilde, tau=39):
+    c = np.zeros( N, dtype=np.int64)
+    buf_cnt=0
+    sign_buf=hashlib.shake_256(c_tilde).digest(8)
+    signs = int.from_bytes(sign_buf[:8], "little")
+    sign = signs & 1
+    for i in range (N-tau,N):
+        buf=hashlib.shake_256(c_tilde).digest(8+buf_cnt+1)
+        j=buf[8+buf_cnt]
+        while j > i:
+            buf_cnt+=1
+            buf=hashlib.shake_256(c_tilde).digest(8+buf_cnt+1)
+            j=buf[8+buf_cnt]
+        c[i] = c[j]
+        c[j]=1 - 2 * sign
+        signs >>= 1
+        sign = signs & 1
+        buf_cnt+=1
+    return c

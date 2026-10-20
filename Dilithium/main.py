@@ -12,11 +12,7 @@ from key_encode import (
     sk_encode
 )
 from ntt_utils import inverse_ntt_A
-k = 4
-l = 4
-eta = 2
-N = 256
-q = 8380417
+from parameters import *#变量引入
 
 # Step 1：生成随机种子
 xi = generate_seed()

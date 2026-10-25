@@ -79,3 +79,21 @@ def sample_in_ball(c_tilde, tau=39):
         sign = signs & 1
         buf_cnt+=1
     return c
+def center_mod(poly, q):#0中心化
+        poly = np.asarray(poly, dtype=np.int64) % q
+        return np.where(poly > q // 2, poly - q, poly)
+def signed_poly_mul(a, b, N, q):
+    return center_mod(multiplier(a, b, N, q), q)
+def generate_sign_z(y, c, s1, l, N, q):
+    z = y.copy()
+    for i in range(l):
+        z[i]+=signed_poly_mul(c,s1[i],N,q)
+    return z
+def check_z(z, gamma1, beta):
+    return bool(np.all(np.abs(z) < gamma1 - beta))
+def generate_sign_r0(w, c, s2, k, N, q, gamma2):
+    r = generate_sign_z(w, -c, s2, k, N, q)
+    _, r0=decompose(r,gamma2)
+    return r0
+def check_r0(r0, gamma2, beta):
+    return bool(np.all(np.abs(r0) < gamma2 - beta))

@@ -38,8 +38,8 @@ def generate_sign_w(A, y, k, l, N, q):#输出w=Ay
 
     return w % q
 def decompose(w, gamma2):# w % q = (2*gamma2*w1+w0) % q
-    m = (q - 1) // alpha
     alpha = 2 * gamma2
+    m = (q - 1) // alpha
     r = w % q
     alpha1=(gamma2+r-1)//alpha
     alpha0=r-2*gamma2*alpha1
@@ -102,9 +102,9 @@ def generate_sign_ct0(c, t0, k, N, q):
     return generate_sign_z(zeros, c, t0, k, N, q)
 def check_ct0(ct0, gamma2):
     return bool(np.all(np.abs(ct0) < gamma2))
-def make_hint(z, r, gamma2):
-    r1, _=decompose(r,gamma2)
-    z_r1, _=decompose(r+z,gamma2)
+def make_hint(z_in, r_in, gamma2):
+    r1, _=decompose(r_in,gamma2)
+    z_r1, _=decompose(r_in+z_in,gamma2)
     h = np.where(z_r1 == r1, 0, 1) 
     return h
 def check_hint(h, omega):
@@ -144,13 +144,12 @@ def sig_encode(c_tilde, z, h, gamma1, omega, k):
 def sign(message, A, s1, s2, t0, tr, K, ctx=b""):
     mu, rho_double_prime=prepare_sign(message,tr,K,ctx)
     kappa = 0
-    num_of_while=1
-    while(num_of_while):
+    while(True):
         y=expand_mask(rho_double_prime, kappa, l, gamma1)
         kappa+=l
         w=generate_sign_w(A, y, k, l, N, q)
         w1,_=decompose(w, gamma2)
-        w1_bytes=(w1, gamma2)
+        w1_bytes=w1_encode(w1, gamma2)
         c_tilde=generate_challenge_seed(mu, w1_bytes)
         c=sample_in_ball(c_tilde, tau=39)
         z=generate_sign_z(y, c, s1, l, N, q)
@@ -162,10 +161,11 @@ def sign(message, A, s1, s2, t0, tr, K, ctx=b""):
             if not(check_ct0(ct0, gamma2)):
                 continue
             else :
-                h=make_hint(z, r, gamma2)
+                h=make_hint(-ct0, r + ct0, gamma2)
                 if not (check_hint(h, omega)):
                     continue
                 else :
                     sig=sig_encode(c_tilde, z, h, gamma1, omega, k)
-    return sig               
+                    return sig 
+                  
 

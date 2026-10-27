@@ -38,8 +38,8 @@ def generate_sign_w(A, y, k, l, N, q):#输出w=Ay
 
     return w % q
 def decompose(w, gamma2):# w % q = (2*gamma2*w1+w0) % q
-    m = (q - 1) // alpha
     alpha = 2 * gamma2
+    m = (q - 1) // alpha
     r = w % q
     alpha1=(gamma2+r-1)//alpha
     alpha0=r-2*gamma2*alpha1
@@ -79,3 +79,93 @@ def sample_in_ball(c_tilde, tau=39):
         sign = signs & 1
         buf_cnt+=1
     return c
+def center_mod(poly, q):#0中心化
+        poly = np.asarray(poly, dtype=np.int64) % q
+        return np.where(poly > q // 2, poly - q, poly)
+def signed_poly_mul(a, b, N, q):
+    return center_mod(multiplier(a, b, N, q), q)
+def generate_sign_z(y, c, s1, l, N, q):
+    z = y.copy()
+    for i in range(l):
+        z[i]+=signed_poly_mul(c,s1[i],N,q)
+    return z
+def check_z(z, gamma1, beta):
+    return bool(np.all(np.abs(z) < gamma1 - beta))
+def generate_sign_r_r0(w, c, s2, k, N, q, gamma2):
+    r = generate_sign_z(w, -c, s2, k, N, q)
+    _, r0=decompose(r,gamma2)
+    return r,r0
+def check_r0(r0, gamma2, beta):
+    return bool(np.all(np.abs(r0) < gamma2 - beta))
+def generate_sign_ct0(c, t0, k, N, q):
+    zeros = np.zeros((k, N), dtype=np.int64)
+    return generate_sign_z(zeros, c, t0, k, N, q)
+def check_ct0(ct0, gamma2):
+    return bool(np.all(np.abs(ct0) < gamma2))
+def make_hint(z_in, r_in, gamma2):
+    r1, _=decompose(r_in,gamma2)
+    z_r1, _=decompose(r_in+z_in,gamma2)
+    h = np.where(z_r1 == r1, 0, 1) 
+    return h
+def check_hint(h, omega):
+    if np.count_nonzero(h) <= omega :
+        accepted=True
+    else :
+        accepted=False
+    return accepted
+def z_encode(z, gamma1):
+    z_p=gamma1-z
+
+    if gamma1==131072:
+        packed_n=18
+    else :
+        raise ValueError("不支持的 gamma1")
+
+    z_packed=bit_pack(z_p,packed_n)
+
+    return z_packed
+def hint_encode(h, omega, k):
+    buf = bytearray(omega + k)
+    buf_num=0
+    for i in range(k):
+        for j in range(N):
+            if h[i][j]!=0:
+                if buf_num >= omega:
+                    raise ValueError("Hint 数量超过 omega")
+                buf[buf_num]=j
+                buf_num+=1
+        buf[omega +i]=buf_num        
+    return bytes(buf)
+def sig_encode(c_tilde, z, h, gamma1, omega, k):
+    z_bytes=z_encode(z, gamma1)
+    h_bytes=hint_encode(h, omega, k)
+    sig = c_tilde + z_bytes + h_bytes
+    return sig
+def sign(message, A, s1, s2, t0, tr, K, ctx=b""):
+    mu, rho_double_prime=prepare_sign(message,tr,K,ctx)
+    kappa = 0
+    while(True):
+        y=expand_mask(rho_double_prime, kappa, l, gamma1)
+        kappa+=l
+        w=generate_sign_w(A, y, k, l, N, q)
+        w1,_=decompose(w, gamma2)
+        w1_bytes=w1_encode(w1, gamma2)
+        c_tilde=generate_challenge_seed(mu, w1_bytes)
+        c=sample_in_ball(c_tilde, tau=39)
+        z=generate_sign_z(y, c, s1, l, N, q)
+        r,r0=generate_sign_r_r0(w, c, s2, k, N, q, gamma2)
+        if not(check_z(z, gamma1, beta) and check_r0(r0, gamma2, beta)):
+            continue
+        else :
+            ct0=generate_sign_ct0(c, t0, k, N, q)
+            if not(check_ct0(ct0, gamma2)):
+                continue
+            else :
+                h=make_hint(-ct0, r + ct0, gamma2)
+                if not (check_hint(h, omega)):
+                    continue
+                else :
+                    sig=sig_encode(c_tilde, z, h, gamma1, omega, k)
+                    return sig 
+                  
+

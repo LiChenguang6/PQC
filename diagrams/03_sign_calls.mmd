@@ -113,12 +113,12 @@ flowchart TB
 
     NOTE["读图说明：主流程实线仅表示执行顺序，不表示相邻函数互相调用。<br/>主流程所有函数均由 sign 直接调用；辅助函数依赖用虚线标明。<br/>ValueError 等异常按源码向调用者传播，不进入 continue 分支。"]
 
-    classDef call fill:#e8f1ff,stroke:#3b6c9e,color:#172b4d;
+    classDef fncall fill:#e8f1ff,stroke:#3b6c9e,color:#172b4d;
     classDef check fill:#fff5d6,stroke:#ad7b00,color:#4f3b00;
     classDef reject fill:#ffe5e5,stroke:#b94a48,color:#6b2020;
     classDef external fill:#e9f6ec,stroke:#42834d,color:#23452a;
     classDef note fill:#f5f5f5,stroke:#888,color:#333;
-    class PREP,MASK,W,DEC,WENC,CHALL,BALL,Z,R,CT,H,SIG,SPM,CENTER,ZE,HE call;
+    class PREP,MASK,W,DEC,WENC,CHALL,BALL,Z,R,CT,H,SIG,SPM,CENTER,ZE,HE fncall;
     class CZ,CR,CCT,CH,BFOR,BREJ check;
     class REJECT reject;
     class MUL,PACK external;

@@ -1,0 +1,57 @@
+flowchart TB
+    begin(["main.py 顶层入口<br/>KeyGen、Sign、Verify 是阶段名，并非三个同名函数"])
+    begin --> params["导入 parameters.py<br/>k=l=4、N=256、q=8380417、eta=2<br/>d=13、gamma1=131072、gamma2=95232、beta=78、omega=80"]
+
+    subgraph keygen["KeyGen · main.py 中按顺序执行的密钥生成语句"]
+        seed["generate_key.generate_seed()<br/>os.urandom(32) → xi"]
+        derive["generate_key.derive_seeds(xi, k, l)<br/>SHAKE256 派生 rho、rho_prime、K"]
+        matrix["generate_key.generate_key_A_NTT(rho, k, l)<br/>内部调用 rej_ntt_poly → A_hat"]
+        inv["ntt_utils.inverse_ntt_A(A_hat)<br/>内部调用 inverse_ntt_matrix → A<br/>inverse_ntt_matrix 调用 bit_reverse_8；使用缓存"]
+        secret["generate_key.generate_key_s(rho_prime, k, l, eta)<br/>内部调用 rej_bounded_poly → s1、s2"]
+        t["generate_key.generate_key_t(A, s1, s2, k, l, N, q)<br/>内部调用 multiplier → t = A·s1 + s2 mod q"]
+        rounding["generate_key.power2round(t, d=13)<br/>得到 t1、t0"]
+        public["key_encode.pk_encode(rho, t1)<br/>内部调用 bit_pack → pk"]
+        digest["key_encode.generate_tr(pk)<br/>SHAKE256 → tr"]
+        private["key_encode.sk_encode(rho, K, tr, s1, s2, t0)<br/>内部调用 bit_pack 三次 → sk<br/>当前 main.py 后续没有使用 sk"]
+        seed --> derive --> matrix --> inv --> secret --> t --> rounding --> public --> digest --> private
+    end
+    params --> seed
+
+    subgraph signing["Sign · 签名"]
+        message["message = b'Hello Dilithium!' "]
+        signature["sign.sign(message, A, s1, s2, t0, tr, K)<br/>内部执行随机拒绝采样循环 → sig<br/>直接传入密钥数组与种子，不解码 sk"]
+        message --> signature
+    end
+    private --> message
+
+    subgraph verifying["Verify · main.py 的四次顺序验签"]
+        valid["result1 = verify.verify(message, pk, sig)<br/>正确消息：预期 True"]
+        alteredMessage["result2 = verify.verify(b'Hello Dilithium?', pk, sig)<br/>篡改消息：预期 False"]
+        mutate["bad_sig = bytearray(sig)<br/>bad_sig[0] ^= 1"]
+        alteredSignature["result3 = verify.verify(message, pk, bytes(bad_sig))<br/>篡改签名：预期 False"]
+        context["result4 = verify.verify(message, pk, sig, ctx=b'Test')<br/>修改上下文：预期 False"]
+        valid --> alteredMessage --> mutate --> alteredSignature --> context
+    end
+    signature --> valid
+    context --> prints["print 四个验签结果"]
+    prints --> a1{"assert result1 is True"}
+    a1 -->|"通过"| a2{"assert result2 is False"}
+    a2 -->|"通过"| a3{"assert result3 is False"}
+    a3 -->|"通过"| a4{"assert result4 is False"}
+    a1 -->|"失败"| fail(["抛出 AssertionError，程序终止"])
+    a2 -->|"失败"| fail
+    a3 -->|"失败"| fail
+    a4 -->|"失败"| fail
+    a4 -->|"通过"| done(["print：完整签名验签测试通过！"])
+    note["实线只表示 main.py 的执行顺序<br/>节点内部说明真实被调函数及其直接辅助调用<br/>不表示前一个函数调用后一个函数<br/>未捕获的运行异常会直接向外传播"]
+
+    classDef key fill:#ecfdf5,stroke:#059669,color:#064e3b;
+    classDef sig fill:#eff6ff,stroke:#2563eb,color:#1e3a8a;
+    classDef ver fill:#faf5ff,stroke:#9333ea,color:#581c87;
+    classDef reject fill:#fff1f2,stroke:#e11d48,color:#881337;
+    classDef info fill:#f8fafc,stroke:#94a3b8,color:#334155;
+    class seed,derive,matrix,inv,secret,t,rounding,public,digest,private key;
+    class message,signature sig;
+    class valid,alteredMessage,mutate,alteredSignature,context ver;
+    class fail reject;
+    class note,params info;

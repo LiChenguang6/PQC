@@ -1,0 +1,53 @@
+flowchart LR
+    subgraph project["Dilithium 项目文件 · 共 9 个 Python 文件"]
+        main["main.py<br/>顺序执行密钥生成、签名、四次验签"]
+        gen["generate_key.py · 9 个函数<br/>种子派生、矩阵采样、秘密向量、乘法、分解"]
+        enc["key_encode.py · 4 个函数<br/>bit_pack、pk_encode、generate_tr、sk_encode"]
+        ntt["ntt_utils.py · 4 个函数<br/>逆 NTT 矩阵及其缓存、单多项式与矩阵变换"]
+        sign["sign.py · 21 个函数<br/>签名与拒绝采样、挑战、响应、Hint、编码"]
+        verify["verify.py · 7 个函数<br/>解码、输入检查、重建与摘要比较"]
+        params["parameters.py<br/>k、l、eta、N、q、d<br/>gamma1、gamma2、beta、tau、omega"]
+        output["output_txt.py<br/>独立工具 output_txt<br/>嵌套函数 scalar、wrap_items、render_array、render<br/>目前没有项目文件导入或调用它"]
+        test["test.py<br/>全部内容被注释<br/>没有可执行导入、函数或测试"]
+    end
+
+    main -->|"导入并调用 sign；重复导入合并表示"| sign
+    main -->|"导入并调用 verify"| verify
+    main -->|"generate_seed、derive_seeds、generate_key_A_NTT<br/>generate_key_s、generate_key_t、power2round"| gen
+    main -->|"pk_encode、generate_tr、sk_encode"| enc
+    main -->|"inverse_ntt_A"| ntt
+    main -->|"from parameters import *"| params
+    sign -->|"multiplier"| gen
+    sign -->|"bit_pack"| enc
+    sign -->|"from parameters import *"| params
+    verify -->|"generate_key_A_NTT、multiplier<br/>另导入 generate_key_t 但未调用"| gen
+    verify -->|"inverse_ntt_A"| ntt
+    verify -->|"generate_sign_w、sample_in_ball、decompose、w1_encode<br/>另导入 generate_challenge_seed 但未调用"| sign
+    verify -->|"from parameters import *"| params
+
+    subgraph dependencies["运行库依赖"]
+        numpy["NumPy<br/>requirements.txt 固定 numpy==2.4.2"]
+        stdlib["Python 标准库"]
+    end
+    gen -.->|"numpy as np"| numpy
+    enc -.->|"numpy as np"| numpy
+    ntt -.->|"numpy as np"| numpy
+    sign -.->|"numpy as np"| numpy
+    verify -.->|"numpy as np"| numpy
+    output -.->|"output_txt 内可选导入 NumPy<br/>ImportError 时支持普通 Python 数据"| numpy
+    gen -.->|"hashlib、os"| stdlib
+    enc -.->|"hashlib；os 仅导入未使用"| stdlib
+    ntt -.->|"functools.lru_cache"| stdlib
+    sign -.->|"hashlib、os"| stdlib
+    verify -.->|"hashlib"| stdlib
+    output -.->|"pathlib.Path、collections.abc.Mapping、numbers.Number<br/>高维数组分支才导入 itertools"| stdlib
+
+    legend["箭头方向：依赖方 → 被依赖方<br/>实线：项目内实际导入，标签注明是否调用<br/>虚线：第三方库或标准库导入<br/>不将注释、未使用导入或数据流画成函数调用"]
+    classDef entry fill:#dbeafe,stroke:#2563eb,color:#172554;
+    classDef crypto fill:#ecfdf5,stroke:#059669,color:#064e3b;
+    classDef passive fill:#f8fafc,stroke:#94a3b8,color:#334155;
+    classDef dependency fill:#fff7ed,stroke:#ea580c,color:#7c2d12;
+    class main entry;
+    class gen,enc,ntt,sign,verify crypto;
+    class params,output,test,legend passive;
+    class numpy,stdlib dependency;

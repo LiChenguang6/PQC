@@ -1,0 +1,125 @@
+flowchart TB
+    %% 实线表示 sign 的执行顺序；虚线表示项目函数的直接调用。
+    %% 主流程中每个函数节点都是 sign 的直接调用，共 16 个不同被调用函数。
+    %% 共覆盖 sign.py 全部 21 个函数；不将执行先后误作辅助函数互调。
+    %% calls: sign -> prepare_sign
+    %% calls: sign -> expand_mask
+    %% calls: sign -> generate_sign_w
+    %% calls: sign -> decompose
+    %% calls: sign -> w1_encode
+    %% calls: sign -> generate_challenge_seed
+    %% calls: sign -> sample_in_ball
+    %% calls: sign -> generate_sign_z
+    %% calls: sign -> generate_sign_r_r0
+    %% calls: sign -> check_z
+    %% calls: sign -> check_r0
+    %% calls: sign -> generate_sign_ct0
+    %% calls: sign -> check_ct0
+    %% calls: sign -> make_hint
+    %% calls: sign -> check_hint
+    %% calls: sign -> sig_encode
+    %% calls: generate_sign_w -> generate_key.multiplier
+    %% calls: w1_encode -> key_encode.bit_pack
+    %% calls: signed_poly_mul -> generate_key.multiplier
+    %% calls: signed_poly_mul -> center_mod
+    %% calls: generate_sign_z -> signed_poly_mul
+    %% calls: generate_sign_r_r0 -> generate_sign_z
+    %% calls: generate_sign_r_r0 -> decompose
+    %% calls: generate_sign_ct0 -> generate_sign_z
+    %% calls: make_hint -> decompose
+    %% calls: z_encode -> key_encode.bit_pack
+    %% calls: sig_encode -> z_encode
+    %% calls: sig_encode -> hint_encode
+    subgraph FLOW["sign.py：sign 的完整执行流程与拒绝采样"]
+        direction TB
+        ENTRY(["sign(message, A, s1, s2, t0, tr, K, ctx)"])
+        PREP["prepare_sign(message, tr, K, ctx)<br/>校验 ctx / tr / K 长度；不合法抛出 ValueError<br/>SHAKE256 计算 mu，os.urandom 产生 rnd<br/>返回 mu、rho_double_prime"]
+        INIT["kappa = 0"]
+        LOOP{{"while True：开始本轮采样"}}
+        MASK["expand_mask(rho_double_prime, kappa, l, gamma1)<br/>按 l 个多项式、每个 N 个系数采样 y<br/>使用 SHAKE256 与两字节计数器"]
+        INC["kappa += l<br/>本轮使用计数器后立即递增"]
+        W["generate_sign_w(A, y, k, l, N, q)<br/>w = A · y mod q"]
+        DEC["decompose(w, gamma2)<br/>获取高位 w1，丢弃低位"]
+        WENC["w1_encode(w1, gamma2)<br/>gamma2=95232 用 6 位；261888 用 4 位<br/>其他参数抛出 ValueError"]
+        CHALL["generate_challenge_seed(mu, w1_bytes)<br/>SHAKE256 生成 32 字节 c_tilde"]
+        BALL["sample_in_ball(c_tilde, tau=39)<br/>采样含 39 个非零项的挑战多项式 c<br/>内部还有 j 大于 i 时的字节拒绝采样"]
+        Z["generate_sign_z(y, c, s1, l, N, q)<br/>z = y + c · s1"]
+        R["generate_sign_r_r0(w, c, s2, k, N, q, gamma2)<br/>r = w − c · s2；分解得到 r0"]
+        CZ{"check_z(z, gamma1, beta)<br/>所有 abs(z) 小于 gamma1 − beta？"}
+        CR{"check_r0(r0, gamma2, beta)<br/>所有 abs(r0) 小于 gamma2 − beta？"}
+        CT["generate_sign_ct0(c, t0, k, N, q)<br/>ct0 = c · t0"]
+        CCT{"check_ct0(ct0, gamma2)<br/>所有 abs(ct0) 小于 gamma2？"}
+        H["make_hint(-ct0, r + ct0, gamma2)<br/>比较 r + ct0 与 r 的高位，生成提示 h"]
+        CH{"check_hint(h, omega)<br/>非零提示数不大于 omega？"}
+        SIG["sig_encode(c_tilde, z, h, gamma1, omega, k)<br/>拼接 c_tilde、z_bytes、h_bytes"]
+        RETURN(["return sig：结束签名"])
+        REJECT["continue：丢弃本轮候选<br/>保留递增后的 kappa，重新采样 y"]
+
+        ENTRY --> PREP --> INIT --> LOOP --> MASK --> INC --> W --> DEC --> WENC --> CHALL --> BALL --> Z --> R --> CZ
+        CZ -->|"是：and 才计算右侧"| CR
+        CZ -->|"否：短路，不调用 check_r0"| REJECT
+        CR -->|是| CT
+        CR -->|否| REJECT
+        CT --> CCT
+        CCT -->|是| H
+        CCT -->|否| REJECT
+        H --> CH
+        CH -->|是| SIG --> RETURN
+        CH -->|否| REJECT
+        REJECT --> LOOP
+    end
+
+    subgraph HELPERS["辅助函数展开：虚线均为实际直接调用"]
+        direction TB
+        MUL["generate_key.multiplier(a, b, N, q)<br/>负循环多项式乘法并模 q"]
+        PACK["key_encode.bit_pack(values, bits)<br/>范围校验后按位打包"]
+        SPM["signed_poly_mul(a, b, N, q)<br/>先 multiplier，再 center_mod"]
+        CENTER["center_mod(poly, q)<br/>系数转换为以零为中心的代表元"]
+        ZE["z_encode(z, gamma1)<br/>gamma1=131072 时打包 gamma1 − z，18 位<br/>其他参数抛出 ValueError"]
+        HE["hint_encode(h, omega, k)<br/>逐多项式、逐系数编码非零索引和累计数量<br/>提示过多时抛出 ValueError"]
+
+        SPM -.->|直接调用| MUL
+        SPM -.->|直接调用| CENTER
+        ZE -.->|直接调用| PACK
+    end
+
+    W -.->|"k × l 次"| MUL
+    WENC -.->|直接调用| PACK
+    Z -.->|"循环 l 次"| SPM
+    R -.->|"参数 w、-c、s2，循环 k 次"| Z
+    R -.->|直接调用| DEC
+    CT -.->|"以零向量作为第一个参数"| Z
+    H -.->|"直接调用 2 次"| DEC
+    SIG -.->|直接调用| ZE
+    SIG -.->|直接调用| HE
+
+    subgraph BALL_DETAIL["sample_in_ball 内部字节拒绝采样；只调用标准库与 NumPy"]
+        direction TB
+        BINIT["c 全零；buf_cnt=0<br/>SHAKE256 前 8 字节提供符号位"]
+        BFOR{"for i in range(N − tau, N)<br/>是否还有一个 i？"}
+        BREAD["从 SHAKE256 前缀读取<br/>j = buf[8 + buf_cnt]"]
+        BREJ{"j 大于 i？"}
+        BNEXT["buf_cnt += 1<br/>扩展 SHAKE256 前缀并重读 j"]
+        BSET["c[i] = c[j]；c[j] = 1 − 2 × sign<br/>右移符号位；buf_cnt += 1"]
+        BRET(["返回 c"])
+
+        BINIT --> BFOR
+        BFOR -->|是| BREAD --> BREJ
+        BREJ -->|是：拒绝该字节| BNEXT --> BREJ
+        BREJ -->|否：接受该索引| BSET --> BFOR
+        BFOR -->|否| BRET
+    end
+    BALL ---|内部控制流展开| BINIT
+
+    NOTE["读图说明：主流程实线仅表示执行顺序，不表示相邻函数互相调用。<br/>主流程所有函数均由 sign 直接调用；辅助函数依赖用虚线标明。<br/>ValueError 等异常按源码向调用者传播，不进入 continue 分支。"]
+
+    classDef call fill:#e8f1ff,stroke:#3b6c9e,color:#172b4d;
+    classDef check fill:#fff5d6,stroke:#ad7b00,color:#4f3b00;
+    classDef reject fill:#ffe5e5,stroke:#b94a48,color:#6b2020;
+    classDef external fill:#e9f6ec,stroke:#42834d,color:#23452a;
+    classDef note fill:#f5f5f5,stroke:#888,color:#333;
+    class PREP,MASK,W,DEC,WENC,CHALL,BALL,Z,R,CT,H,SIG,SPM,CENTER,ZE,HE call;
+    class CZ,CR,CCT,CH,BFOR,BREJ check;
+    class REJECT reject;
+    class MUL,PACK external;
+    class NOTE note;

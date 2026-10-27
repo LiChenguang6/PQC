@@ -1,0 +1,117 @@
+flowchart TB
+    LEGEND["verify.py 完整调用与控制流程<br/>实线：控制流程；虚线：实际函数调用<br/>NumPy、hashlib 和 Python 内置调用写在节点内"]
+
+    subgraph CONTROL["verify：按实际执行顺序验签"]
+        direction TB
+        V["verify(message, pk, sig, ctx)"]
+        PARSE["try：先 pk_decode(pk, k, N)<br/>再 sig_decode(sig, gamma1, omega, k, l, N)"]
+        PARSED{"解码期间抛出 ValueError？"}
+        REJECT["return False"]
+        ZCHECK{"np.all(np.abs(z) ＜ gamma1 - beta)？"}
+        CTXCHECK{"len(ctx) ≤ 255？"}
+        HASH["message1 = 0x00 + bytes([len(ctx)]) + ctx + message<br/>mu_buf = hashlib.shake_256(pk).digest(64) + message1<br/>mu = hashlib.shake_256(mu_buf).digest(64)"]
+        CHALLENGE["c = sample_in_ball(c_tilde, tau=39)"]
+        MATRIX["A_hat = generate_key_A_NTT(rho, k, l)<br/>A = inverse_ntt_A(A_hat)"]
+        AZ["Az = generate_sign_w(A, z, k, l, N, q)<br/>ct1_d = np.zeros(t1.shape, np.int64)"]
+        LOOP{"for i in range(k)：还有多项式？"}
+        MUL["ct1_d[i] += multiplier(c, t1[i], N, q)"]
+        RECON["w_prime = (Az - 2^d * ct1_d) % q"]
+        HINT["w1_prime = use_hint(h, w_prime, gamma2)"]
+        FINALHASH["c_tilde_prime = hashlib.shake_256(<br/>mu + w1_encode(w1_prime, gamma2)).digest(32)"]
+        RESULT["return c_tilde_prime == c_tilde<br/>返回布尔比较结果"]
+        V --> PARSE --> PARSED
+        PARSED -->|是：except ValueError| REJECT
+        PARSED -->|否| ZCHECK
+        ZCHECK -->|否| REJECT
+        ZCHECK -->|是| CTXCHECK
+        CTXCHECK -->|否| REJECT
+        CTXCHECK -->|是| HASH --> CHALLENGE --> MATRIX --> AZ --> LOOP
+        LOOP -->|是| MUL --> LOOP
+        LOOP -->|否| RECON --> HINT --> FINALHASH --> RESULT
+    end
+
+    subgraph INTERNAL["verify.py：全部 7 个函数及直接调用"]
+        direction TB
+        PK["pk_decode(pk, k, N)<br/>长度必须为 32 + ceil(k*N*10/8)<br/>rho = pk[:32]；bit_unpack 后 reshape(k, N)<br/>长度错误抛出 ValueError"]
+        SIG["sig_decode(sig, gamma1, omega, k, l, N)<br/>长度必须为 2420，否则抛出 ValueError<br/>切出 c_tilde、z_bytes、h_bytes<br/>依次调用 z_decode、hint_decode"]
+        Z["z_decode(z_bytes, gamma1, l, N)<br/>长度必须为 2304，否则抛出 ValueError<br/>bit_unpack 后计算 gamma1 - z_p<br/>reshape(l, N)"]
+        BITS["bit_unpack(data, bits, count)<br/>int.from_bytes(data, little)<br/>np.zeros；循环移位与掩码，返回 values"]
+        HD["hint_decode(h_bytes, omega, k, N)<br/>np.zeros((k, N), dtype=np.int64)"]
+        UH["use_hint(h, r, gamma2)<br/>r1, r0 = decompose(r, gamma2)<br/>m = (q-1) // (2*gamma2)<br/>np.where：h=0 保留 r1<br/>否则按 r0 正负对 r1 加 1 或减 1，再模 m"]
+        V -.->|直接调用| PK
+        V -.->|直接调用| SIG
+        V -.->|直接调用| UH
+        PK -.->|bits=10；count=k*N| BITS
+        SIG -.->|先调用| Z
+        SIG -.->|再调用| HD
+        Z -.->|bits=18；count=l*N| BITS
+    end
+
+    subgraph HINTDECODE["hint_decode：编码合法性检查与索引循环"]
+        direction TB
+        HLEN{"len(h_bytes) == omega + k？"}
+        HI{"for i in range(k)：还有多项式？"}
+        HORDER{"i ＜ k-1 且<br/>h_bytes[omega+i] ＞ h_bytes[omega+i+1]？<br/>按 and 短路求值"}
+        HSTART["num_of_j = 0（i=0）<br/>否则 num_of_j = h_bytes[omega+i-1]<br/>end = h_bytes[omega+i]"]
+        HBOUND{"end ＜ num_of_j 或 end ＞ omega？"}
+        HJ{"for index in range(num_of_j, end)：<br/>还有索引？"}
+        HINDEX["index_num = 0（首个索引）<br/>否则 index_num = h_bytes[index-1]<br/>num = h_bytes[index]"]
+        HSTRICT{"index ＞ num_of_j 且 num ≤ index_num？<br/>代码为两层 if"}
+        HSET["h[i][num] = 1"]
+        HTAIL["index_num = h_bytes[omega+k-1]<br/>seg = h_bytes[index_num:omega]"]
+        HNONZERO{"np.any(seg)？"}
+        HRETURN["return h"]
+        HERROR["raise ValueError<br/>由 verify 的解码 try/except 捕获"]
+        HD --> HLEN
+        HLEN -->|否| HERROR
+        HLEN -->|是| HI
+        HI -->|是| HORDER
+        HORDER -->|是| HERROR
+        HORDER -->|否| HSTART --> HBOUND
+        HBOUND -->|是| HERROR
+        HBOUND -->|否| HJ
+        HJ -->|是| HINDEX --> HSTRICT
+        HSTRICT -->|是| HERROR
+        HSTRICT -->|否| HSET --> HJ
+        HJ -->|否| HI
+        HI -->|否| HTAIL --> HNONZERO
+        HNONZERO -->|是| HERROR
+        HNONZERO -->|否| HRETURN
+    end
+
+    subgraph EXTERNAL["其他项目文件：直接调用及其辅助调用"]
+        direction TB
+        BALL["sign.sample_in_ball<br/>SHAKE256；挑战多项式采样<br/>含 while j ＞ i 的拒绝采样"]
+        GEN["generate_key.generate_key_A_NTT"]
+        REJ["generate_key.rej_ntt_poly<br/>SHAKE128；系数拒绝采样"]
+        NTT["ntt_utils.inverse_ntt_A"]
+        IM["ntt_utils.inverse_ntt_matrix<br/>lru_cache(maxsize=1)"]
+        BR["ntt_utils.bit_reverse_8"]
+        W["sign.generate_sign_w"]
+        MULT["generate_key.multiplier<br/>朴素负循环多项式乘法"]
+        DEC["sign.decompose"]
+        WENC["sign.w1_encode"]
+        PACK["key_encode.bit_pack"]
+        V -.->|直接调用| BALL
+        V -.->|直接调用| GEN
+        V -.->|直接调用| NTT
+        V -.->|直接调用| W
+        V -.->|for i：直接调用 k 次| MULT
+        V -.->|直接调用| WENC
+        GEN -.-> REJ
+        NTT -.-> IM
+        IM -.->|缓存未命中时执行函数体| BR
+        W -.->|k*l 次| MULT
+        UH -.-> DEC
+        WENC -.-> PACK
+    end
+
+    NOTE["代码事实：generate_key_t 与 generate_challenge_seed 只导入，未调用。<br/>verify 只在解码阶段捕获 ValueError；后续计算不在该 try 内。<br/>解码中的长度 2420、2304 按代码固定值展示，未改写为通用标准参数。"]
+    classDef entry fill:#dbeafe,stroke:#2563eb,color:#172554;
+    classDef failure fill:#fee2e2,stroke:#dc2626,color:#7f1d1d;
+    classDef external fill:#fef3c7,stroke:#d97706,color:#78350f;
+    classDef note fill:#f3f4f6,stroke:#6b7280,color:#111827;
+    class V,RESULT entry;
+    class REJECT,HERROR failure;
+    class BALL,GEN,REJ,NTT,IM,BR,W,MULT,DEC,WENC,PACK external;
+    class LEGEND,NOTE note;
